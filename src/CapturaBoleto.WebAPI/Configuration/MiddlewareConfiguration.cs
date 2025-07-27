@@ -14,9 +14,7 @@ public static class MiddlewareConfiguration
     /// <returns>WebApplication configurado</returns>
     public static WebApplication ConfigureMiddlewarePipeline(this WebApplication app)
     {
-        Log.Information("Configurando pipeline de middleware");
-
-        // Middleware de desenvolvimento
+        // Middleware específicos por ambiente
         if (app.Environment.IsDevelopment())
         {
             app.UseDevelopmentMiddleware();
@@ -44,8 +42,6 @@ public static class MiddlewareConfiguration
         // Middleware de controllers
         app.MapControllers();
 
-        Log.Information("Pipeline de middleware configurado com sucesso");
-
         return app;
     }
 
@@ -56,8 +52,6 @@ public static class MiddlewareConfiguration
     /// <returns>WebApplication configurado</returns>
     private static WebApplication UseDevelopmentMiddleware(this WebApplication app)
     {
-        Log.Information("Configurando middleware de desenvolvimento");
-
         // Página de exceção para desenvolvedores
         app.UseDeveloperExceptionPage();
 
@@ -74,8 +68,6 @@ public static class MiddlewareConfiguration
     /// <returns>WebApplication configurado</returns>
     private static WebApplication UseProductionMiddleware(this WebApplication app)
     {
-        Log.Information("Configurando middleware de produção");
-
         // Página de erro genérica
         app.UseExceptionHandler(appBuilder =>
         {
@@ -108,8 +100,6 @@ public static class MiddlewareConfiguration
     /// <returns>WebApplication configurado</returns>
     private static WebApplication UseSecurityMiddleware(this WebApplication app)
     {
-        Log.Information("Configurando middleware de segurança");
-
         // Headers de segurança
         app.Use(async (context, next) =>
         {
@@ -142,10 +132,7 @@ public static class MiddlewareConfiguration
     /// <returns>WebApplication configurado</returns>
     public static WebApplication UseGlobalExceptionHandler(this WebApplication app)
     {
-        Log.Information("Configurando middleware de tratamento de erros global");
-
         app.UseMiddleware<GlobalExceptionMiddleware>();
-
         return app;
     }
 }

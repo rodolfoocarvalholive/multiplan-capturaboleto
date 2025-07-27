@@ -1,5 +1,4 @@
 using CapturaBoleto.Application.Services;
-using Serilog;
 
 namespace CapturaBoleto.WebAPI.Configuration;
 
@@ -16,8 +15,6 @@ public static class DependencyInjectionConfiguration
     /// <returns>IServiceCollection configurado</returns>
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
-        Log.Information("Registrando serviços da aplicação");
-
         // Registrar serviços de logging personalizados
         services.AddScoped<BoletoLoggingService>();
 
@@ -37,8 +34,6 @@ public static class DependencyInjectionConfiguration
             options.SuppressAsyncSuffixInActionNames = false; // Manter sufixo Async
         });
 
-        Log.Information("Serviços da aplicação registrados com sucesso");
-
         return services;
     }
 
@@ -49,8 +44,6 @@ public static class DependencyInjectionConfiguration
     /// <returns>IServiceCollection configurado</returns>
     private static IServiceCollection AddDomainServices(this IServiceCollection services)
     {
-        Log.Debug("Registrando serviços da camada de domínio");
-
         // Registrar serviços de domínio aqui quando necessário
         // services.AddScoped<IBoletoValidationService, BoletoValidationService>();
 
@@ -64,8 +57,6 @@ public static class DependencyInjectionConfiguration
     /// <returns>IServiceCollection configurado</returns>
     private static IServiceCollection AddApplicationLayerServices(this IServiceCollection services)
     {
-        Log.Debug("Registrando serviços da camada de aplicação");
-
         // Registrar casos de uso (Use Cases) quando implementados
         // services.AddScoped<ICriarBoletoUseCase, CriarBoletoUseCase>();
         // services.AddScoped<IProcessarBoletoUseCase, ProcessarBoletoUseCase>();
@@ -84,8 +75,6 @@ public static class DependencyInjectionConfiguration
     /// <returns>IServiceCollection configurado</returns>
     private static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        Log.Debug("Registrando serviços da camada de infraestrutura");
-
         // Registrar contexto do Entity Framework quando implementado
         // services.AddDbContext<CapturaBoletoDbContext>(options =>
         //     options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
@@ -106,8 +95,6 @@ public static class DependencyInjectionConfiguration
     /// <returns>IServiceCollection configurado</returns>
     public static IServiceCollection AddCorsConfiguration(this IServiceCollection services)
     {
-        Log.Information("Configurando políticas de CORS");
-
         services.AddCors(options =>
         {
             options.AddPolicy("CapturaBoletoPolicy", policy =>
@@ -143,8 +130,6 @@ public static class DependencyInjectionConfiguration
     /// <returns>IServiceCollection configurado</returns>
     public static IServiceCollection AddCacheConfiguration(this IServiceCollection services)
     {
-        Log.Information("Configurando cache em memória");
-
         services.AddMemoryCache(options =>
         {
             options.SizeLimit = 100; // Limite de 100 entradas
@@ -166,8 +151,6 @@ public static class DependencyInjectionConfiguration
     /// <returns>IServiceCollection configurado</returns>
     public static IServiceCollection AddCompressionConfiguration(this IServiceCollection services)
     {
-        Log.Information("Configurando compressão de resposta");
-
         services.AddResponseCompression(options =>
         {
             options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();

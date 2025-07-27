@@ -22,8 +22,6 @@ public static class SerilogConfiguration
             .WriteTo.Console()
             .CreateBootstrapLogger();
 
-        Log.Information("Configurando Serilog como provedor de logging principal");
-
         // Configurar Serilog como provedor de logging principal
         builder.Host.UseSerilog((context, services, configuration) => configuration
             .ReadFrom.Configuration(context.Configuration)
@@ -56,8 +54,6 @@ public static class SerilogConfiguration
     /// <returns>WebApplication configurado</returns>
     public static WebApplication UseSerilogRequestLoggingMiddleware(this WebApplication app)
     {
-        Log.Information("Configurando middleware de logging de requisições HTTP");
-
         app.UseSerilogRequestLogging(options =>
         {
             options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";

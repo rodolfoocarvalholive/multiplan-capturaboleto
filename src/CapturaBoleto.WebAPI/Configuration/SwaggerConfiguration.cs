@@ -15,8 +15,6 @@ public static class SwaggerConfiguration
     /// <returns>IServiceCollection configurado</returns>
     public static IServiceCollection AddSwaggerConfiguration(this IServiceCollection services)
     {
-        Log.Information("Configurando Swagger/OpenAPI");
-
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(c =>
         {
@@ -53,11 +51,6 @@ public static class SwaggerConfiguration
             if (File.Exists(xmlPath))
             {
                 c.IncludeXmlComments(xmlPath);
-                Log.Information("Comentários XML incluídos no Swagger: {XmlPath}", xmlPath);
-            }
-            else
-            {
-                Log.Warning("Arquivo de comentários XML não encontrado: {XmlPath}", xmlPath);
             }
 
             // Configurar filtros personalizados do Swagger
@@ -77,8 +70,6 @@ public static class SwaggerConfiguration
     {
         if (app.Environment.IsDevelopment())
         {
-            Log.Information("Swagger habilitado para ambiente de desenvolvimento");
-
             app.UseSwagger(c =>
             {
                 c.RouteTemplate = "swagger/{documentName}/swagger.json";
@@ -97,10 +88,6 @@ public static class SwaggerConfiguration
                 c.ShowCommonExtensions(); // Mostrar extensões comuns
                 c.EnableValidator(); // Habilitar validador de schema
             });
-        }
-        else
-        {
-            Log.Information("Swagger desabilitado para ambiente de produção");
         }
 
         return app;

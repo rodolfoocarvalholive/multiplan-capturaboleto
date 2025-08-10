@@ -1,4 +1,7 @@
 using CapturaBoleto.Application.Services;
+using CapturaBoleto.Domain.Services;
+using CapturaBoleto.Domain.Repositories;
+using CapturaBoleto.Infrastructure.Repositories;
 
 namespace CapturaBoleto.WebAPI.Configuration;
 
@@ -44,8 +47,8 @@ public static class DependencyInjectionConfiguration
     /// <returns>IServiceCollection configurado</returns>
     private static IServiceCollection AddDomainServices(this IServiceCollection services)
     {
-        // Registrar serviços de domínio aqui quando necessário
-        // services.AddScoped<IBoletoValidationService, BoletoValidationService>();
+        // Registrar serviços de domínio
+        services.AddScoped<CapturaBoletoService>();
 
         return services;
     }
@@ -79,8 +82,8 @@ public static class DependencyInjectionConfiguration
         // services.AddDbContext<CapturaBoletoDbContext>(options =>
         //     options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
-        // Registrar repositórios
-        // services.AddScoped<IBoletoRepository, BoletoRepository>();
+        // Registrar repositórios - Por enquanto implementação em memória
+        services.AddScoped<IBoletoRepository, InMemoryBoletoRepository>();
 
         // Registrar serviços externos
         // services.AddHttpClient<IBancoCentralService, BancoCentralService>();

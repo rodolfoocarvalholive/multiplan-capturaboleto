@@ -1,125 +1,61 @@
+using Microsoft.AspNetCore.ResponseCompression;
+using System.IO.Compression;
 using CapturaBoleto.Application.Services;
 using CapturaBoleto.Domain.Services;
+using CapturaBoleto.Infrastructure.Services;
 using CapturaBoleto.Domain.Repositories;
 using CapturaBoleto.Infrastructure.Repositories;
 
 namespace CapturaBoleto.WebAPI.Configuration;
 
 /// <summary>
-/// Configuração de registro de serviços de injeção de dependência
+/// Configurações de Dependency Injection e serviços da aplicação
 /// </summary>
 public static class DependencyInjectionConfiguration
 {
     /// <summary>
-    /// Registra todos os serviços da aplicação
+    /// Adiciona serviços da camada de aplicação
     /// </summary>
-    /// <param name="services">IServiceCollection</param>
-    /// <param name="configuration">IConfiguration</param>
-    /// <returns>IServiceCollection configurado</returns>
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
     {
-        // Registrar serviços de logging personalizados
+        // Serviços da aplicação
         services.AddScoped<BoletoLoggingService>();
 
-        // Registrar serviços de domínio
-        services.AddDomainServices();
-
-        // Registrar serviços de aplicação
-        services.AddApplicationLayerServices();
-
-        // Registrar serviços de infraestrutura
-        services.AddInfrastructureServices(configuration);
-
-        // Registrar controllers
-        services.AddControllers(options =>
-        {
-            // Configurações globais dos controllers
-            options.SuppressAsyncSuffixInActionNames = false; // Manter sufixo Async
-        });
-
-        return services;
-    }
-
-    /// <summary>
-    /// Registra serviços da camada de domínio
-    /// </summary>
-    /// <param name="services">IServiceCollection</param>
-    /// <returns>IServiceCollection configurado</returns>
-    private static IServiceCollection AddDomainServices(this IServiceCollection services)
-    {
-        // Registrar serviços de domínio
+        // Serviços de domínio
         services.AddScoped<CapturaBoletoService>();
 
-        return services;
-    }
-
-    /// <summary>
-    /// Registra serviços da camada de aplicação
-    /// </summary>
-    /// <param name="services">IServiceCollection</param>
-    /// <returns>IServiceCollection configurado</returns>
-    private static IServiceCollection AddApplicationLayerServices(this IServiceCollection services)
-    {
-        // Registrar casos de uso (Use Cases) quando implementados
-        // services.AddScoped<ICriarBoletoUseCase, CriarBoletoUseCase>();
-        // services.AddScoped<IProcessarBoletoUseCase, ProcessarBoletoUseCase>();
-
-        // Registrar AutoMapper quando necessário
-        // services.AddAutoMapper(typeof(BoletoMappingProfile));
-
-        return services;
-    }
-
-    /// <summary>
-    /// Registra serviços da camada de infraestrutura
-    /// </summary>
-    /// <param name="services">IServiceCollection</param>
-    /// <param name="configuration">IConfiguration</param>
-    /// <returns>IServiceCollection configurado</returns>
-    private static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
-    {
-        // Registrar contexto do Entity Framework quando implementado
-        // services.AddDbContext<CapturaBoletoDbContext>(options =>
-        //     options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
-
-        // Registrar repositórios - Por enquanto implementação em memória
+        // Serviços de domínio e infraestrutura
+        services.AddScoped<IBoletoExternalService, BoletoExternalService>();
         services.AddScoped<IBoletoRepository, InMemoryBoletoRepository>();
 
-        // Registrar serviços externos
-        // services.AddHttpClient<IBancoCentralService, BancoCentralService>();
+        // HttpClient para BoletoExternalService
+        services.AddHttpClient<BoletoExternalService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+            client.DefaultRequestHeaders.Add("User-Agent", "CapturaBoleto/1.0.0");
+        });
+
+        // Configurações básicas do ASP.NET Core
+        services.AddControllers();
+        services.AddEndpointsApiExplorer();
 
         return services;
     }
 
     /// <summary>
-    /// Configura políticas de CORS
+    /// Configura CORS para desenvolvimento
     /// </summary>
-    /// <param name="services">IServiceCollection</param>
-    /// <returns>IServiceCollection configurado</returns>
     public static IServiceCollection AddCorsConfiguration(this IServiceCollection services)
     {
         services.AddCors(options =>
         {
-            options.AddPolicy("CapturaBoletoPolicy", policy =>
+            options.AddPolicy("CapturaBoletoPolicy", builder =>
             {
-                policy.WithOrigins(
-                        "http://localhost:3000",    // React dev server
-                        "http://localhost:4200",    // Angular dev server
-                        "https://localhost:5001",   // Local HTTPS
-                        "https://capturaboleto.multiplan.com.br" // Produção
-                    )
+                builder
+                    .AllowAnyOrigin()
                     .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowCredentials();
-            });
-
-            // Política mais restritiva para produção
-            options.AddPolicy("ProductionPolicy", policy =>
-            {
-                policy.WithOrigins("https://capturaboleto.multiplan.com.br")
-                    .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
-                    .WithHeaders("Content-Type", "Authorization")
-                    .AllowCredentials();
+                    .AllowAnyHeader();
             });
         });
 
@@ -129,37 +65,32 @@ public static class DependencyInjectionConfiguration
     /// <summary>
     /// Configura cache em memória
     /// </summary>
-    /// <param name="services">IServiceCollection</param>
-    /// <returns>IServiceCollection configurado</returns>
     public static IServiceCollection AddCacheConfiguration(this IServiceCollection services)
     {
-        services.AddMemoryCache(options =>
-        {
-            options.SizeLimit = 100; // Limite de 100 entradas
-        });
-
-        // Configurar cache distribuído quando necessário
-        // services.AddStackExchangeRedisCache(options =>
-        // {
-        //     options.Configuration = configuration.GetConnectionString("Redis");
-        // });
-
+        services.AddMemoryCache();
         return services;
     }
 
     /// <summary>
     /// Configura compressão de resposta
     /// </summary>
-    /// <param name="services">IServiceCollection</param>
-    /// <returns>IServiceCollection configurado</returns>
     public static IServiceCollection AddCompressionConfiguration(this IServiceCollection services)
     {
         services.AddResponseCompression(options =>
         {
-            options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
-            options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
-            options.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults
-                .MimeTypes.Concat(new[] { "application/json" });
+            options.EnableForHttps = true;
+            options.Providers.Add<GzipCompressionProvider>();
+            options.Providers.Add<BrotliCompressionProvider>();
+        });
+
+        services.Configure<GzipCompressionProviderOptions>(options =>
+        {
+            options.Level = CompressionLevel.Fastest;
+        });
+
+        services.Configure<BrotliCompressionProviderOptions>(options =>
+        {
+            options.Level = CompressionLevel.Fastest;
         });
 
         return services;

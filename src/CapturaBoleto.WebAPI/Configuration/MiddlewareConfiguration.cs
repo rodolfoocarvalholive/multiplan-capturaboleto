@@ -14,6 +14,9 @@ public static class MiddlewareConfiguration
     /// <returns>WebApplication configurado</returns>
     public static WebApplication ConfigureMiddlewarePipeline(this WebApplication app)
     {
+        // Middleware de tratamento global de exceções (PRIMEIRO)
+        app.UseGlobalExceptionHandler();
+
         // Middleware específicos por ambiente
         if (app.Environment.IsDevelopment())
         {
@@ -35,6 +38,7 @@ public static class MiddlewareConfiguration
 
         // Middleware de roteamento e autorização
         app.UseHttpsRedirection();
+        app.UseRouting();
         app.UseCors("CapturaBoletoPolicy");
         app.UseAuthentication(); // Para futuras implementações
         app.UseAuthorization();

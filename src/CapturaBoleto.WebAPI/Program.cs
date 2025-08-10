@@ -1,10 +1,9 @@
-using System.Reflection;
+Ôªøusing System.Reflection;
 using Serilog;
 using Serilog.Events;
-using CapturaBoleto.Application.Services;
 using CapturaBoleto.WebAPI.Configuration;
 
-// Configurar Serilog early logging (para capturar logs de inicializaÁ„o)
+// Configurar Serilog early logging (para capturar logs de inicializa√ß√£o)
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
     .Enrich.FromLogContext()
@@ -17,10 +16,10 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
-    // ===== CONFIGURA«√O DE LOGGING =====
+    // ===== CONFIGURA√á√ÉO DE LOGGING =====
     builder.ConfigureSerilog();
 
-    // ===== CONFIGURA«√O DE SERVI«OS =====
+    // ===== CONFIGURA√á√ÉO DE SERVI√áOS =====
     builder.Services
         .AddApplicationServices(builder.Configuration)
         .AddSwaggerConfiguration()
@@ -28,25 +27,25 @@ try
         .AddCacheConfiguration()
         .AddCompressionConfiguration();
 
-    // ===== CONSTRU«√O DA APLICA«√O =====
+    // ===== CONSTRU√á√ÉO DA APLICA√á√ÉO =====
     var app = builder.Build();
 
-    // ===== CONFIGURA«√O DO PIPELINE DE MIDDLEWARE =====
+    // ===== CONFIGURA√á√ÉO DO PIPELINE DE MIDDLEWARE =====
     app.ConfigureMiddlewarePipeline();
 
     Log.Information("CapturaBoleto API configurada com sucesso");
     
-    // ===== EXECU«√O DA APLICA«√O =====
+    // ===== EXECU√á√ÉO DA APLICA√á√ÉO =====
     await app.RunAsync();
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Erro fatal ao inicializar a aplicaÁ„o");
-    return 1; // CÛdigo de saÌda para indicar erro
+    Log.Fatal(ex, "Erro fatal ao inicializar a aplica√ß√£o");
+    return 1; // C√≥digo de sa√≠da para indicar erro
 }
 finally
 {
     SerilogConfiguration.CloseSerilogLogger();
 }
 
-return 0; // CÛdigo de saÌda de sucesso
+return 0; // C√≥digo de sa√≠da de sucesso

@@ -13,17 +13,62 @@ public class BoletoExternalService : IBoletoExternalService
     private readonly HttpClient _httpClient;
     private readonly ILogger<BoletoExternalService> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
+    private MultiplanConfigurationResponse? _multiplanConfig;
 
     public BoletoExternalService(HttpClient httpClient, ILogger<BoletoExternalService> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
-        
+
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             WriteIndented = true
         };
+    }
+
+    /// <summary>
+    /// Carrega configurações da API do Multiplan
+    /// </summary>
+    private async Task<MultiplanConfigurationResponse?> CarregarConfiguracaoMultiplanAsync()
+    {
+        if (_multiplanConfig != null)
+            return _multiplanConfig;
+
+        try
+        {
+            _logger.LogInformation("Carregando configurações da API Multiplan");
+
+            var configEndpoint = "https://canallojista.multiplan.com.br/assets/data/config.json";
+            using var response = await _httpClient.GetAsync(configEndpoint);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonContent = await response.Content.ReadAsStringAsync();
+                _multiplanConfig = JsonSerializer.Deserialize<MultiplanConfigurationResponse>(jsonContent, _jsonOptions);
+
+                if (_multiplanConfig?.IsValid() == true)
+                {
+                    _logger.LogInformation("Configurações Multiplan carregadas com sucesso. Ambiente: {Ambiente}, Versão: {Versao}",
+                        _multiplanConfig.Ambiente, _multiplanConfig.Versao);
+                }
+                else
+                {
+                    _logger.LogWarning("Configurações Multiplan inválidas");
+                    _multiplanConfig = null;
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Falha ao carregar configurações Multiplan. Status: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao carregar configurações da API Multiplan");
+        }
+
+        return _multiplanConfig;
     }
 
     /// <summary>
@@ -39,35 +84,52 @@ public class BoletoExternalService : IBoletoExternalService
             _logger.LogInformation("Iniciando consulta externa do boleto. CodigoBarras: {CodigoBarras}, Banco: {CodigoBanco}",
                 codigoBarras, codigoBanco);
 
+            // Carregar configurações do Multiplan se necessário
+            var multiplanConfig = await CarregarConfiguracaoMultiplanAsync();
+            
             // TODO: Implementar chamada para API externa específica do banco
             // Diferentes bancos podem ter diferentes endpoints e formatos
-            
             var endpoint = ObterEndpointPorBanco(codigoBanco);
+            
+            // Se não tiver endpoint configurado para o banco, usar API do Multiplan como fallback
+            if (string.IsNullOrEmpty(endpoint) && multiplanConfig != null)
+            {
+                endpoint = multiplanConfig.GetFullApiUrl("boletos");
+                _logger.LogInformation("Usando endpoint do Multiplan como fallback: {Endpoint}", endpoint);
+            }
+
             if (string.IsNullOrEmpty(endpoint))
             {
                 _logger.LogWarning("Endpoint não configurado para o banco: {CodigoBanco}", codigoBanco);
                 return null;
             }
 
-            var requestUri = $"{endpoint}/boletos/{codigoBarras}";
-            
+            var requestUri = $"{endpoint}/{codigoBarras}";
+
+            // Adicionar header de API Key se disponível
+            if (multiplanConfig != null && !string.IsNullOrEmpty(multiplanConfig.ApiKey))
+            {
+                _httpClient.DefaultRequestHeaders.Remove("X-API-Key");
+                _httpClient.DefaultRequestHeaders.Add("X-API-Key", multiplanConfig.ApiKey);
+            }
+
             using var response = await _httpClient.GetAsync(requestUri);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var jsonContent = await response.Content.ReadAsStringAsync();
                 var boletoInfo = JsonSerializer.Deserialize<BoletoExternalInfo>(jsonContent, _jsonOptions);
-                
+
                 _logger.LogInformation("Consulta externa bem-sucedida para boleto: {CodigoBarras}", codigoBarras);
                 return boletoInfo;
             }
-            
+
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 _logger.LogInformation("Boleto não encontrado na API externa: {CodigoBarras}", codigoBarras);
                 return null;
             }
-            
+
             _logger.LogWarning("Falha na consulta externa. StatusCode: {StatusCode}, CodigoBarras: {CodigoBarras}",
                 response.StatusCode, codigoBarras);
             return null;
@@ -108,7 +170,7 @@ public class BoletoExternalService : IBoletoExternalService
             // Extrair código do banco do código de barras
             var codigoBanco = codigoBarras[..3];
             var endpoint = ObterEndpointPorBanco(codigoBanco);
-            
+
             if (string.IsNullOrEmpty(endpoint))
             {
                 return new BoletoValidationStatus
@@ -120,20 +182,20 @@ public class BoletoExternalService : IBoletoExternalService
             }
 
             var requestUri = $"{endpoint}/boletos/{codigoBarras}/status";
-            
+
             using var response = await _httpClient.GetAsync(requestUri);
-            
+
             if (response.IsSuccessStatusCode)
             {
                 var jsonContent = await response.Content.ReadAsStringAsync();
                 var validationStatus = JsonSerializer.Deserialize<BoletoValidationStatus>(jsonContent, _jsonOptions);
-                
+
                 _logger.LogInformation("Validação de status bem-sucedida. CodigoBarras: {CodigoBarras}, Status: {Status}",
                     codigoBarras, validationStatus?.Status);
-                
+
                 return validationStatus ?? new BoletoValidationStatus { IsValid = false, Status = "ERRO_DESCONHECIDO" };
             }
-            
+
             return new BoletoValidationStatus
             {
                 IsValid = false,
@@ -144,7 +206,7 @@ public class BoletoExternalService : IBoletoExternalService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro na validação de status do boleto: {CodigoBarras}", codigoBarras);
-            
+
             return new BoletoValidationStatus
             {
                 IsValid = false,
@@ -181,7 +243,7 @@ public class BoletoExternalService : IBoletoExternalService
 
             // 80% de chance de sucesso em simulação
             var result = Random.Shared.NextDouble() < 0.8 ? scenarios[0] : scenarios[Random.Shared.Next(1, scenarios.Length)];
-            
+
             _logger.LogInformation("Simulação de pagamento finalizada. CodigoBarras: {CodigoBarras}, Sucesso: {Sucesso}",
                 codigoBarras, result.Success);
 
@@ -190,7 +252,7 @@ public class BoletoExternalService : IBoletoExternalService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erro na simulação de pagamento: {CodigoBarras}", codigoBarras);
-            
+
             return new PaymentSimulationResult
             {
                 Success = false,

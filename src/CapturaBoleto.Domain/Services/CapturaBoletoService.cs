@@ -25,6 +25,8 @@ namespace CapturaBoleto.Domain.Services
         /// <returns>Resultado da autenticação com token de sessão</returns>
         public async Task<ResultadoAutenticacao> IniciarCapturaBoletoAsync(string usuario, string senha)
         {
+            _boletoExternalService.ConsultarBoletoAsync("12345678901234567890", "001");
+
             if (string.IsNullOrWhiteSpace(usuario))
                 throw new ArgumentException("Usuário não pode ser nulo ou vazio", nameof(usuario));
 
